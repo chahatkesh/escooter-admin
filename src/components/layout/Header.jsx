@@ -1,0 +1,83 @@
+// src/components/layout/Header.jsx
+import React from "react";
+import { Menu, Bell, Sun, Moon, Globe } from "lucide-react";
+import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
+
+const Header = ({ onMenuClick }) => {
+  const [isDark, setIsDark] = React.useState(false);
+  const [language, setLanguage] = React.useState("en");
+
+  const toggleTheme = () => {
+    setIsDark(!isDark);
+    // Add theme implementation logic here
+  };
+
+  const toggleLanguage = () => {
+    setLanguage(language === "en" ? "ar" : "en");
+    // Add language switching logic here
+  };
+
+  return (
+    <header className="bg-white border-b border-gray-200 z-30">
+      <div className="px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={onMenuClick}
+              className="p-2 rounded-lg hover:bg-gray-100">
+              <Menu className="h-6 w-6 text-gray-600" />
+            </motion.button>
+            <div className="ml-4">
+              <h1 className="text-xl font-semibold text-teal-700">
+                E-Scooter Admin
+              </h1>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleLanguage}
+              className="p-2 rounded-lg hover:bg-gray-100">
+              <Globe className="h-5 w-5 text-gray-600" />
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleTheme}
+              className="p-2 rounded-lg hover:bg-gray-100">
+              {isDark ? (
+                <Sun className="h-5 w-5 text-gray-600" />
+              ) : (
+                <Moon className="h-5 w-5 text-gray-600" />
+              )}
+            </motion.button>
+
+            <motion.div whileTap={{ scale: 0.95 }} className="relative">
+              <Link
+                to="/notifications"
+                className="p-2 rounded-lg hover:bg-gray-100">
+                <Bell className="h-5 w-5 text-gray-600" />
+                <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+              </Link>
+            </motion.div>
+
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="flex items-center">
+              <img
+                src="https://static.vecteezy.com/system/resources/previews/024/183/502/non_2x/male-avatar-portrait-of-a-young-man-with-a-beard-illustration-of-male-character-in-modern-color-style-vector.jpg"
+                alt="Profile"
+                className="h-8 w-8 rounded-full"
+              />
+            </motion.div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+};
+
+export default Header;

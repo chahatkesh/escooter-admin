@@ -1,11 +1,13 @@
-import React from "react";
+// src/App.jsx
+import Layout from "./components/layout/Layout";
+import Routes from "./routes"; // We'll create this next
 
-const App = () => {
+function App() {
   return (
-    <div>
-      <h1 className="text-red-400">E-scooter Admin</h1>
-    </div>
+    <Layout>
+      <Routes />
+    </Layout>
   );
-};
+}
 
 export default App;
