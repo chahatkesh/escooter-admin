@@ -1,4 +1,3 @@
-// src/components/reports/PaymentReport.jsx
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import {
@@ -11,7 +10,7 @@ import {
   Filter,
 } from "lucide-react";
 
-// Dummy data
+// Dummy data remains the same...
 const paymentData = [
   {
     id: "PAY-001",
@@ -33,7 +32,6 @@ const paymentData = [
     date: "2024-02-06T11:00:00",
     cardLast4: "1234",
   },
-  // Add more dummy data...
 ];
 
 const PaymentReport = () => {
@@ -50,13 +48,14 @@ const PaymentReport = () => {
     return colors[status] || "bg-gray-100 text-gray-800";
   };
 
-  const getStatusIcon = (status) => {
+  const StatusIcon = ({ status, className }) => {
     const icons = {
       successful: CheckCircle,
       failed: XCircle,
       pending: AlertTriangle,
     };
-    return icons[status] || CheckCircle;
+    const Icon = icons[status] || CheckCircle;
+    return <Icon className={className} />;
   };
 
   const handleSearch = (e) => {
@@ -123,9 +122,20 @@ const PaymentReport = () => {
             label: "Successful",
             count: summary.successfulCount,
             color: "green",
+            status: "successful",
           },
-          { label: "Failed", count: summary.failedCount, color: "red" },
-          { label: "Pending", count: summary.pendingCount, color: "yellow" },
+          {
+            label: "Failed",
+            count: summary.failedCount,
+            color: "red",
+            status: "failed",
+          },
+          {
+            label: "Pending",
+            count: summary.pendingCount,
+            color: "yellow",
+            status: "pending",
+          },
         ].map((item, index) => (
           <motion.div
             key={item.label}
@@ -139,15 +149,17 @@ const PaymentReport = () => {
                 <h3 className="text-2xl font-semibold mt-1">{item.count}</h3>
               </div>
               <div className={`bg-${item.color}-50 p-3 rounded-full`}>
-                {getStatusIcon(item.label.toLowerCase())({
-                  className: `h-6 w-6 text-${item.color}-600`,
-                })}
+                <StatusIcon
+                  status={item.status}
+                  className={`h-6 w-6 text-${item.color}-600`}
+                />
               </div>
             </div>
           </motion.div>
         ))}
       </div>
 
+      {/* Rest of the component remains the same... */}
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
