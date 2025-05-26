@@ -5,6 +5,7 @@ import { scooterService, authService } from "../services/api";
 import StatCard from "../components/dashboard/StatCard";
 import RevenueChart from "../components/dashboard/RevenueChart";
 import RecentBookings from "../components/dashboard/RecentBookings";
+import ApiTestPanel from "../components/dashboard/ApiTestPanel";
 
 const Dashboard = () => {
   // Fetch scooter data
@@ -177,6 +178,9 @@ const Dashboard = () => {
           <RecentBookings bookings={recentBookings} />
         </div>
       </div>
+
+      {/* API Testing Panel for Development */}
+      <ApiTestPanel />
     </div>
   );
 };

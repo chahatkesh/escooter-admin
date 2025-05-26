@@ -1,21 +1,31 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { login, loading, error } = useAuth();
+  const [localError, setLocalError] = useState("");
+  const { login, loading, error, clearError } = useAuth();
+
+  useEffect(() => {
+    // Clear errors when component mounts
+    clearError();
+    setLocalError("");
+  }, [clearError]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLocalError("");
+
     const result = await login({ email, password });
     if (result.success) {
-      // Don't manually navigate - let the AuthContext and App.jsx handle the redirect
       console.log("Login successful, authentication flow will handle redirect");
     } else {
-      console.error("Login failed:", result.error);
+      setLocalError(result.error);
     }
   };
+
+  const displayError = localError || error;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
@@ -64,7 +74,11 @@ const Login = () => {
             </div>
           </div>
 
-          {error && <div className="text-sm text-red-600">{error}</div>}
+          {displayError && (
+            <div className="text-sm text-red-600 text-center">
+              {displayError}
+            </div>
+          )}
 
           <div>
             <button

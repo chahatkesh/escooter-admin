@@ -1,15 +1,14 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import Layout from "../../components/layout/Layout";
 
-const ProtectedRoute = () => {
+const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
 
   // Show loading state while checking authentication
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        Loading...
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-500"></div>
       </div>
     );
   }
@@ -19,12 +18,8 @@ const ProtectedRoute = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // If authenticated, render the child routes within the layout
-  return (
-    <Layout>
-      <Outlet />
-    </Layout>
-  );
+  // If authenticated, render the children
+  return children;
 };
 
 export default ProtectedRoute;

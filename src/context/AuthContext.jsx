@@ -7,6 +7,7 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     checkAuth();
@@ -14,6 +15,7 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuth = async () => {
     try {
+      setError(null);
       const token = localStorage.getItem("token");
       console.log("Checking auth, token exists:", !!token);
 
@@ -32,6 +34,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem("token");
       setIsAuthenticated(false);
       setUser(null);
+      setError("Authentication failed");
     } finally {
       setLoading(false);
     }
@@ -39,6 +42,8 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
+      setError(null);
+      setLoading(true);
       console.log("Attempting login with credentials:", {
         email: credentials.email,
       });
@@ -55,14 +60,19 @@ export const AuthProvider = ({ children }) => {
         return { success: true };
       } else {
         console.error("No token received in response");
+        setError("No token received");
         return { success: false, error: "No token received" };
       }
     } catch (error) {
       console.error("Login failed:", error);
+      const errorMessage = error.response?.data?.message || "Login failed";
+      setError(errorMessage);
       return {
         success: false,
-        error: error.response?.data?.message || "Login failed",
+        error: errorMessage,
       };
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -70,14 +80,21 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("token");
     setIsAuthenticated(false);
     setUser(null);
+    setError(null);
+  };
+
+  const clearError = () => {
+    setError(null);
   };
 
   const value = {
     isAuthenticated,
     loading,
     user,
+    error,
     login,
     logout,
+    clearError,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -19,23 +19,60 @@ export const scooterApi = axios.create({
   },
 });
 
-// Simple response interceptor for basic error handling
+// Token management
+const getToken = () => localStorage.getItem('token');
+
+// Request interceptors to add auth tokens
+authApi.interceptors.request.use(
+  (config) => {
+    const token = getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+scooterApi.interceptors.request.use(
+  (config) => {
+    const token = getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response interceptors for error handling
 const handleResponse = (response) => {
   return response;
 };
 
 const handleError = (error) => {
   console.error('API Error:', error);
+
+  // Handle unauthorized access
+  if (error.response?.status === 401) {
+    // Token is invalid or expired
+    localStorage.removeItem('token');
+    window.location.href = '/login';
+  }
+
   return Promise.reject(error);
 };
 
-// Apply basic error handling interceptors
+// Apply error handling interceptors
 authApi.interceptors.response.use(handleResponse, handleError);
 scooterApi.interceptors.response.use(handleResponse, handleError);
 
 // Auth API services
 export const authService = {
-  // Authentication
+  // Admin Authentication
+  createAdmin: (adminData) =>
+    authApi.post('/admin/create', adminData),
+
   login: (credentials) =>
     authApi.post('/admin/login', credentials),
 
@@ -51,6 +88,19 @@ export const authService = {
 
   createUser: (userData) =>
     authApi.post('/auth/signup', userData),
+
+  updateUser: (userId, userData) =>
+    authApi.put(`/users/${userId}`, userData),
+
+  deleteUser: (userId) =>
+    authApi.delete(`/users/${userId}`),
+
+  // OTP Management
+  sendOTP: (phoneData) =>
+    authApi.post('/auth/send-otp', phoneData),
+
+  verifyOTP: (otpData) =>
+    authApi.post('/auth/verify-otp', otpData),
 };
 
 // Scooter API services
