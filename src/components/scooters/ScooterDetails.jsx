@@ -1,5 +1,5 @@
 // src/components/scooters/ScooterDetails.jsx
-import React from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Battery,
@@ -12,11 +12,41 @@ import {
   Settings,
   Lock,
   Unlock,
+  Loader,
 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { scooterService } from "../../services/api";
 
 const ScooterDetails = ({ scooter, onBack }) => {
-  // Dummy maintenance history
-  const maintenanceHistory = [
+  const queryClient = useQueryClient();
+  const scooterId = scooter?.id || scooter?._id;
+
+  // Fetch detailed scooter data
+  const {
+    data: scooterDetails,
+    isLoading: isLoadingDetails,
+    error: detailsError,
+  } = useQuery({
+    queryKey: ["scooter", scooterId],
+    queryFn: () =>
+      scooterService
+        .getScooterById(scooterId)
+        .then((response) => response.data),
+    enabled: !!scooterId,
+  });
+
+  // Fetch telemetry data
+  const { data: telemetry, isLoading: isLoadingTelemetry } = useQuery({
+    queryKey: ["telemetry", scooterId],
+    queryFn: () =>
+      scooterService
+        .getLatestTelemetry(scooterId)
+        .then((response) => response.data),
+    enabled: !!scooterId,
+  });
+
+  // Get maintenance history
+  const [maintenanceHistory, setMaintenanceHistory] = useState([
     {
       id: 1,
       date: "2024-01-15",
@@ -31,10 +61,20 @@ const ScooterDetails = ({ scooter, onBack }) => {
       description: "Replace front wheel",
       technician: "Mike Johnson",
     },
-  ];
+  ]);
 
-  // Dummy ride history
-  const rideHistory = [
+  // Get ride history
+  const { data: rides, isLoading: isLoadingRides } = useQuery({
+    queryKey: ["rides", scooterId],
+    queryFn: () =>
+      scooterService
+        .getAllRides({ scooterId })
+        .then((response) => response.data?.slice(0, 5) || []), // Get latest 5 rides
+    enabled: !!scooterId,
+  });
+
+  // Prepare ride history from the API data
+  const rideHistory = rides || [
     {
       id: 1,
       date: "2024-02-01",
@@ -51,6 +91,16 @@ const ScooterDetails = ({ scooter, onBack }) => {
     },
   ];
 
+  // Mutations for scooter actions
+  const updateStatusMutation = useMutation({
+    mutationFn: (status) =>
+      scooterService.updateScooterStatus(scooterId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["scooter", scooterId] });
+      queryClient.invalidateQueries({ queryKey: ["scooters"] });
+    },
+  });
+
   const getBatteryColor = (level) => {
     if (level > 70) return "text-green-500";
     if (level > 30) return "text-yellow-500";
@@ -66,7 +116,11 @@ const ScooterDetails = ({ scooter, onBack }) => {
             <ChevronLeft className="w-5 h-5" />
           </button>
           <h2 className="text-xl font-semibold text-gray-800">
-            Scooter Details - {scooter?.id}
+            Scooter Details -{" "}
+            {scooterDetails?.name ||
+              scooter?.name ||
+              scooter?.id ||
+              "Loading..."}
           </h2>
         </div>
       </div>
@@ -86,41 +140,59 @@ const ScooterDetails = ({ scooter, onBack }) => {
               <div className="flex items-center text-gray-600">
                 <Battery
                   className={`w-5 h-5 mr-2 ${getBatteryColor(
-                    scooter?.battery
+                    scooterDetails?.batteryLevel ||
+                      scooter?.batteryLevel ||
+                      scooter?.battery ||
+                      0
                   )}`}
                 />
                 Battery Level
               </div>
-              <span className="font-medium">{scooter?.battery}%</span>
+              <span className="font-medium">
+                {scooterDetails?.batteryLevel ||
+                  scooter?.batteryLevel ||
+                  scooter?.battery ||
+                  0}
+                %
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center text-gray-600">
                 <MapPin className="w-5 h-5 mr-2" />
                 Location
               </div>
-              <span className="font-medium">{scooter?.location}</span>
+              <span className="font-medium">
+                {scooterDetails?.lastStation ||
+                  scooter?.lastStation ||
+                  scooter?.location ||
+                  "Unknown"}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center text-gray-600">
                 <Activity className="w-5 h-5 mr-2" />
                 Status
               </div>
-              <span className="font-medium capitalize">{scooter?.status}</span>
+              <span className="font-medium capitalize">
+                {scooterDetails?.status || scooter?.status || "Unknown"}
+              </span>
             </div>
             <div className="pt-4 flex space-x-2">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
+                onClick={() => updateStatusMutation.mutate("maintenance")}
                 className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50">
                 <Lock className="w-4 h-4 mr-2" />
-                Lock
+                Set to Maintenance
               </motion.button>
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
+                onClick={() => updateStatusMutation.mutate("available")}
                 className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50">
                 <Settings className="w-4 h-4 mr-2" />
-                Configure
+                Set to Available
               </motion.button>
             </div>
           </div>

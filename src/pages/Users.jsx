@@ -1,11 +1,14 @@
 // src/pages/Users.jsx
-import React, { useState } from "react";
+import { useState } from "react";
 import { AnimatePresence } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
 import UserList from "../components/users/UserList";
 import UserDetails from "../components/users/UserDetails";
 import UserForm from "../components/users/UserForm";
+import { authService } from "../services/api";
 
 const Users = () => {
+  const queryClient = useQueryClient();
   const [selectedUser, setSelectedUser] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState(null);
@@ -24,10 +27,23 @@ const Users = () => {
     setIsFormOpen(true);
   };
 
-  const handleFormSubmit = (userData) => {
-    // Handle form submission (add/edit user)
-    console.log("Form submitted:", userData);
-    setIsFormOpen(false);
+  const handleFormSubmit = async (userData) => {
+    try {
+      if (userToEdit) {
+        // Update existing user
+        await authService.updateUser(userToEdit._id, userData);
+      } else {
+        // Create new user
+        await authService.createUser(userData);
+      }
+
+      // Invalidate and refetch users
+      queryClient.invalidateQueries("users");
+      setIsFormOpen(false);
+    } catch (error) {
+      console.error("Error submitting user form:", error);
+      // Handle error (you could set an error state here to show a message)
+    }
   };
 
   const handleFormClose = () => {

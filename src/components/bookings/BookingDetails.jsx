@@ -1,6 +1,8 @@
 // src/components/bookings/BookingDetails.jsx
 import React from "react";
 import { motion } from "framer-motion";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { scooterService } from "../../services/api";
 import {
   ChevronLeft,
   User,
@@ -11,9 +13,25 @@ import {
   Calendar,
   AlertTriangle,
   MessageSquare,
+  Loader,
 } from "lucide-react";
 
 const BookingDetails = ({ booking, onBack }) => {
+  // Fetch detailed booking info if needed
+  // const queryClient = useQueryClient();
+  // const { data: bookingDetails, isLoading } = useQuery({
+  //   queryKey: ["booking", booking.id],
+  //   queryFn: async () => {
+  //     const response = await scooterService.getRideById(booking.id);
+  //     return response.data;
+  //   },
+  //   enabled: !!booking?.id, // Only run query if we have a booking id
+  // });
+
+  // We're using the booking prop data for now
+  // const currentBooking = bookingDetails || booking;
+  const currentBooking = booking;
+
   const getStatusColor = (status) => {
     const colors = {
       completed: "text-green-600",
@@ -22,7 +40,34 @@ const BookingDetails = ({ booking, onBack }) => {
       pending: "text-yellow-600",
     };
     return colors[status] || "text-gray-600";
+  }; // End ride mutation (for active rides)
+  const queryClient = useQueryClient();
+  const endRideMutation = useMutation({
+    mutationFn: () => scooterService.endRide(currentBooking.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["rides"]);
+      onBack(); // Go back to the list
+    },
+    onError: (error) => {
+      console.error("Error ending ride:", error);
+      alert("Failed to end ride. Please try again.");
+    },
+  });
+
+  const handleEndRide = () => {
+    if (window.confirm("Are you sure you want to end this ride?")) {
+      endRideMutation.mutate();
+    }
   };
+
+  if (!currentBooking) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader className="animate-spin mr-2" />
+        <span>Loading booking details...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -37,23 +82,24 @@ const BookingDetails = ({ booking, onBack }) => {
             </button>
             <div>
               <h2 className="text-xl font-semibold text-gray-800">
-                Booking Details - {booking?.id}
+                Booking Details - {currentBooking?.id}
               </h2>
               <p
                 className={`mt-1 font-medium ${getStatusColor(
-                  booking?.status
+                  currentBooking?.status
                 )}`}>
-                {booking?.status.charAt(0).toUpperCase() +
-                  booking?.status.slice(1)}
+                {currentBooking?.status?.charAt(0).toUpperCase() +
+                  currentBooking?.status?.slice(1)}
               </p>
             </div>
-          </div>
-          {booking?.status === "active" && (
+          </div>{" "}
+          {currentBooking?.status === "active" && (
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-              End Ride
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              onClick={handleEndRide}>
+              {endRideMutation.isLoading ? "Ending..." : "End Ride"}
             </motion.button>
           )}
         </div>
@@ -76,17 +122,17 @@ const BookingDetails = ({ booking, onBack }) => {
                 Start Time
               </div>
               <span className="font-medium">
-                {new Date(booking?.startTime).toLocaleString()}
+                {new Date(currentBooking?.startTime).toLocaleString()}
               </span>
             </div>
-            {booking?.endTime && (
+            {currentBooking?.endTime && (
               <div className="flex items-center justify-between">
                 <div className="flex items-center text-gray-600">
                   <Calendar className="w-4 h-4 mr-2" />
                   End Time
                 </div>
                 <span className="font-medium">
-                  {new Date(booking?.endTime).toLocaleString()}
+                  {new Date(currentBooking?.endTime).toLocaleString()}
                 </span>
               </div>
             )}
@@ -95,21 +141,25 @@ const BookingDetails = ({ booking, onBack }) => {
                 <Clock className="w-4 h-4 mr-2" />
                 Duration
               </div>
-              <span className="font-medium">{booking?.duration} mins</span>
+              <span className="font-medium">
+                {currentBooking?.duration} mins
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center text-gray-600">
                 <MapPin className="w-4 h-4 mr-2" />
                 Distance
               </div>
-              <span className="font-medium">{booking?.distance} km</span>
+              <span className="font-medium">{currentBooking?.distance} km</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center text-gray-600">
                 <DollarSign className="w-4 h-4 mr-2" />
                 Amount
               </div>
-              <span className="font-medium">${booking?.amount.toFixed(2)}</span>
+              <span className="font-medium">
+                ${currentBooking?.amount?.toFixed(2)}
+              </span>
             </div>
           </div>
         </motion.div>
@@ -124,15 +174,17 @@ const BookingDetails = ({ booking, onBack }) => {
           </h3>
           <div className="flex items-center mb-4">
             <img
-              src={`/api/placeholder/48/48`}
-              alt={booking?.userName}
+              src={`https://ui-avatars.com/api/?name=${currentBooking?.userName}&background=0D8ABC&color=fff`}
+              alt={currentBooking?.userName}
               className="w-12 h-12 rounded-full"
             />
             <div className="ml-4">
               <div className="text-lg font-medium text-gray-900">
-                {booking?.userName}
+                {currentBooking?.userName}
               </div>
-              <div className="text-sm text-gray-500">{booking?.userId}</div>
+              <div className="text-sm text-gray-500">
+                {currentBooking?.userId}
+              </div>
             </div>
           </div>
           <div className="space-y-4 mt-6">
@@ -161,21 +213,23 @@ const BookingDetails = ({ booking, onBack }) => {
                 <Bike className="w-4 h-4 mr-2" />
                 Scooter ID
               </div>
-              <span className="font-medium">{booking?.scooterId}</span>
+              <span className="font-medium">{currentBooking?.scooterId}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center text-gray-600">
                 <MapPin className="w-4 h-4 mr-2" />
                 Location
               </div>
-              <span className="font-medium">{booking?.location}</span>
+              <span className="font-medium">{currentBooking?.location}</span>
             </div>
           </div>
           <div className="mt-6">
-            <button className="w-full flex items-center justify-center px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <a
+              href={`/scooters/${currentBooking?.scooterId}`}
+              className="w-full flex items-center justify-center px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50">
               <Bike className="w-4 h-4 mr-2" />
               View Scooter Details
-            </button>
+            </a>
           </div>
         </motion.div>
       </div>
@@ -195,7 +249,7 @@ const BookingDetails = ({ booking, onBack }) => {
       </motion.div>
 
       {/* Issues Section */}
-      {booking?.status === "completed" && (
+      {currentBooking?.status === "completed" && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

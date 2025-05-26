@@ -1,14 +1,19 @@
 // src/components/scooters/ScooterForm.jsx
-import React, { useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { X, Save, Bike, Battery, MapPin, Bolt } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { scooterService } from "../../services/api";
 
 const ScooterForm = ({ scooter, onClose, onSubmit }) => {
+  const queryClient = useQueryClient();
+
   const [formData, setFormData] = useState({
-    id: scooter?.id || "",
-    model: scooter?.model || "",
-    battery: scooter?.battery || 100,
-    location: scooter?.location || "",
+    name: scooter?.name || scooter?.id || "",
+    model: scooter?.model || "X-1000",
+    batteryLevel: scooter?.batteryLevel || scooter?.battery || 100,
+    location: scooter?.location || "40.7128,-74.0060",
+    lastStation: scooter?.lastStation || "",
     status: scooter?.status || "available",
     lastMaintenance:
       scooter?.lastMaintenance || new Date().toISOString().split("T")[0],
@@ -16,12 +21,34 @@ const ScooterForm = ({ scooter, onClose, onSubmit }) => {
 
   const [errors, setErrors] = useState({});
 
+  // Mutation for creating or updating a scooter
+  const mutation = useMutation({
+    mutationFn: (data) => {
+      if (scooter?._id || scooter?.id) {
+        // Update existing scooter
+        return scooterService.updateScooterStatus(
+          scooter._id || scooter.id,
+          data.status
+        );
+      } else {
+        // Create new scooter
+        return scooterService.createScooter(data);
+      }
+    },
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ["scooters"] });
+      if (onSubmit) onSubmit(formData);
+      onClose();
+    },
+  });
+
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.id.trim()) newErrors.id = "Scooter ID is required";
+    if (!formData.name.trim()) newErrors.name = "Scooter name is required";
     if (!formData.model.trim()) newErrors.model = "Model is required";
-    if (formData.battery < 0 || formData.battery > 100) {
-      newErrors.battery = "Battery must be between 0 and 100";
+    if (formData.batteryLevel < 0 || formData.batteryLevel > 100) {
+      newErrors.batteryLevel = "Battery must be between 0 and 100";
     }
     if (!formData.location.trim()) newErrors.location = "Location is required";
 
@@ -32,7 +59,7 @@ const ScooterForm = ({ scooter, onClose, onSubmit }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit(formData);
+      mutation.mutate(formData);
     }
   };
 
@@ -71,24 +98,24 @@ const ScooterForm = ({ scooter, onClose, onSubmit }) => {
 
         <form onSubmit={handleSubmit} className="p-6">
           <div className="space-y-6">
-            {/* Scooter ID Field */}
+            {/* Scooter Name Field */}
             <div>
               <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
                 <Bike className="w-4 h-4 mr-2" />
-                Scooter ID
+                Scooter Name
               </label>
               <input
                 type="text"
-                name="id"
-                value={formData.id}
+                name="name"
+                value={formData.name}
                 onChange={handleChange}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-                  errors.id ? "border-red-500" : "border-gray-200"
+                  errors.name ? "border-red-500" : "border-gray-200"
                 }`}
-                placeholder="Enter scooter ID"
+                placeholder="Enter scooter name"
               />
-              {errors.id && (
-                <p className="mt-1 text-sm text-red-500">{errors.id}</p>
+              {errors.name && (
+                <p className="mt-1 text-sm text-red-500">{errors.name}</p>
               )}
             </div>
 
@@ -121,17 +148,19 @@ const ScooterForm = ({ scooter, onClose, onSubmit }) => {
               </label>
               <input
                 type="number"
-                name="battery"
-                value={formData.battery}
+                name="batteryLevel"
+                value={formData.batteryLevel}
                 onChange={handleChange}
                 min="0"
                 max="100"
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-                  errors.battery ? "border-red-500" : "border-gray-200"
+                  errors.batteryLevel ? "border-red-500" : "border-gray-200"
                 }`}
               />
-              {errors.battery && (
-                <p className="mt-1 text-sm text-red-500">{errors.battery}</p>
+              {errors.batteryLevel && (
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.batteryLevel}
+                </p>
               )}
             </div>
 
@@ -139,7 +168,7 @@ const ScooterForm = ({ scooter, onClose, onSubmit }) => {
             <div>
               <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
                 <MapPin className="w-4 h-4 mr-2" />
-                Location
+                Location Coordinates
               </label>
               <input
                 type="text"
@@ -149,11 +178,27 @@ const ScooterForm = ({ scooter, onClose, onSubmit }) => {
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
                   errors.location ? "border-red-500" : "border-gray-200"
                 }`}
-                placeholder="Enter location"
+                placeholder="Enter coordinates (e.g. 40.7128,-74.0060)"
               />
               {errors.location && (
                 <p className="mt-1 text-sm text-red-500">{errors.location}</p>
               )}
+            </div>
+
+            {/* Last Station Field */}
+            <div>
+              <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                <MapPin className="w-4 h-4 mr-2" />
+                Last Station
+              </label>
+              <input
+                type="text"
+                name="lastStation"
+                value={formData.lastStation}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                placeholder="Enter station ID (e.g. NYC-001)"
+              />
             </div>
 
             {/* Status Field */}

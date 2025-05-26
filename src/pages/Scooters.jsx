@@ -1,6 +1,7 @@
 // src/pages/Scooters.jsx
-import React, { useState } from "react";
+import { useState } from "react";
 import { AnimatePresence } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
 import ScooterList from "../components/scooters/ScooterList";
 import ScooterDetails from "../components/scooters/ScooterDetails";
 import ScooterForm from "../components/scooters/ScooterForm";
@@ -24,9 +25,12 @@ const Scooters = () => {
     setIsFormOpen(true);
   };
 
+  const queryClient = useQueryClient();
+
   const handleFormSubmit = (scooterData) => {
-    // Handle form submission (add/edit scooter)
-    console.log("Form submitted:", scooterData);
+    // Form submission is now handled within the ScooterForm component
+    // Here we just close the form and refresh the data
+    queryClient.invalidateQueries("scooters");
     setIsFormOpen(false);
   };
 

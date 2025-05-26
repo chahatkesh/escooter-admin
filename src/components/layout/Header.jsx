@@ -1,12 +1,15 @@
 // src/components/layout/Header.jsx
-import React from "react";
-import { Menu, Bell, Sun, Moon, Globe } from "lucide-react";
+import React, { useState } from "react";
+import { Menu, Bell, Sun, Moon, Globe, LogOut } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const Header = ({ onMenuClick }) => {
-  const [isDark, setIsDark] = React.useState(false);
-  const [language, setLanguage] = React.useState("en");
+  const [isDark, setIsDark] = useState(false);
+  const [language, setLanguage] = useState("en");
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const { logout } = useAuth();
 
   const toggleTheme = () => {
     setIsDark(!isDark);
@@ -16,6 +19,11 @@ const Header = ({ onMenuClick }) => {
   const toggleLanguage = () => {
     setLanguage(language === "en" ? "ar" : "en");
     // Add language switching logic here
+  };
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = "/login";
   };
 
   return (
@@ -66,12 +74,27 @@ const Header = ({ onMenuClick }) => {
 
             <motion.div
               whileHover={{ scale: 1.05 }}
-              className="flex items-center">
-              <img
-                src="https://static.vecteezy.com/system/resources/previews/024/183/502/non_2x/male-avatar-portrait-of-a-young-man-with-a-beard-illustration-of-male-character-in-modern-color-style-vector.jpg"
-                alt="Profile"
-                className="h-8 w-8 rounded-full"
-              />
+              className="relative flex items-center">
+              <button
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="flex items-center focus:outline-none">
+                <img
+                  src="https://static.vecteezy.com/system/resources/previews/024/183/502/non_2x/male-avatar-portrait-of-a-young-man-with-a-beard-illustration-of-male-character-in-modern-color-style-vector.jpg"
+                  alt="Profile"
+                  className="h-8 w-8 rounded-full"
+                />
+              </button>
+
+              {showProfileMenu && (
+                <div className="absolute right-0 top-10 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </button>
+                </div>
+              )}
             </motion.div>
           </div>
         </div>

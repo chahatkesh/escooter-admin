@@ -1,5 +1,5 @@
 // src/components/bookings/BookingStats.jsx
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import {
   BarChart,
@@ -13,57 +13,160 @@ import {
   LineChart,
   Line,
 } from "recharts";
-import { Clock, TrendingUp, Users, DollarSign } from "lucide-react";
+import {
+  Clock,
+  TrendingUp,
+  Users,
+  DollarSign,
+  Calendar,
+  Loader,
+} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { scooterService } from "../../services/api";
 
-// Dummy data
-const dailyData = [
-  { day: "Mon", bookings: 45, revenue: 450 },
-  { day: "Tue", bookings: 52, revenue: 520 },
-  { day: "Wed", bookings: 48, revenue: 480 },
-  { day: "Thu", bookings: 70, revenue: 700 },
-  { day: "Fri", bookings: 65, revenue: 650 },
-  { day: "Sat", bookings: 85, revenue: 850 },
-  { day: "Sun", bookings: 75, revenue: 750 },
-];
+// Process API data for the chart
+const processDailyData = (rides) => {
+  if (!rides || !rides.length) return [];
 
-const hourlyData = [
-  { hour: "00:00", active: 10 },
-  { hour: "03:00", active: 5 },
-  { hour: "06:00", active: 15 },
-  { hour: "09:00", active: 40 },
-  { hour: "12:00", active: 35 },
-  { hour: "15:00", active: 45 },
-  { hour: "18:00", active: 30 },
-  { hour: "21:00", active: 20 },
-];
+  // Group by day of week
+  const dayMap = {
+    0: "Sun",
+    1: "Mon",
+    2: "Tue",
+    3: "Wed",
+    4: "Thu",
+    5: "Fri",
+    6: "Sat",
+  };
+
+  const dailyStats = {};
+
+  // Initialize all days of week
+  Object.values(dayMap).forEach((day) => {
+    dailyStats[day] = { bookings: 0, revenue: 0 };
+  });
+
+  // Process rides data
+  rides.forEach((ride) => {
+    const date = new Date(ride.startTime);
+    const day = dayMap[date.getDay()];
+
+    if (!dailyStats[day]) {
+      dailyStats[day] = { bookings: 0, revenue: 0 };
+    }
+
+    dailyStats[day].bookings++;
+    dailyStats[day].revenue += ride.amount || 0;
+  });
+
+  // Convert to array format for charts
+  return Object.entries(dailyStats).map(([day, data]) => ({
+    day,
+    bookings: data.bookings,
+    revenue: data.revenue,
+  }));
+};
+
+// Process hourly distribution data
+const processHourlyData = (rides) => {
+  if (!rides || !rides.length) return [];
+
+  // Group by hour of day (every 3 hours)
+  const hourGroups = {
+    "00:00": 0,
+    "03:00": 0,
+    "06:00": 0,
+    "09:00": 0,
+    "12:00": 0,
+    "15:00": 0,
+    "18:00": 0,
+    "21:00": 0,
+  };
+
+  // Process rides data
+  rides.forEach((ride) => {
+    const date = new Date(ride.startTime);
+    const hour = date.getHours();
+    const group = `${Math.floor(hour / 3) * 3}`.padStart(2, "0") + ":00";
+
+    if (hourGroups[group] !== undefined) {
+      hourGroups[group]++;
+    }
+  });
+
+  // Convert to array format for charts
+  return Object.entries(hourGroups).map(([hour, active]) => ({
+    hour,
+    active,
+  }));
+};
 
 const BookingStats = () => {
+  const [timeRange, setTimeRange] = useState("week"); // "week", "month", "year"
+
+  // Fetch ride data from API
+  const {
+    data: ridesData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["rides-stats", timeRange],
+    queryFn: async () => {
+      try {
+        // In a real implementation, you would pass the timeRange to filter
+        const response = await scooterService.getAllRides({});
+        return response.data || [];
+      } catch (err) {
+        console.error("Error fetching ride stats:", err);
+        return [];
+      }
+    },
+  });
+
+  // Process chart data when API data is available
+  const dailyData = processDailyData(ridesData || []);
+  const hourlyData = processHourlyData(ridesData || []);
+
+  // Calculate summary statistics
+  const totalBookings = ridesData?.length || 0;
+  const activeRides =
+    ridesData?.filter((ride) => ride.status === "active")?.length || 0;
+
+  // Calculate unique users (based on userId)
+  const uniqueUsers = ridesData
+    ? new Set(ridesData.map((ride) => ride.userId)).size
+    : 0;
+
+  // Calculate total revenue
+  const totalRevenue =
+    ridesData?.reduce((sum, ride) => sum + (ride.amount || 0), 0) || 0;
+
   const stats = [
     {
       title: "Total Bookings",
-      value: "440",
-      trend: "+12.5%",
+      value: totalBookings.toString(),
+      trend: "", // We would calculate this if we had historical data
       icon: Clock,
       color: "blue",
     },
     {
       title: "Active Rides",
-      value: "28",
-      trend: "+5.2%",
+      value: activeRides.toString(),
+      trend: "",
       icon: TrendingUp,
       color: "teal",
     },
     {
       title: "Unique Users",
-      value: "325",
-      trend: "+8.1%",
+      value: uniqueUsers.toString(),
+      trend: "",
       icon: Users,
       color: "purple",
     },
     {
       title: "Total Revenue",
-      value: "$4,400",
-      trend: "+15.3%",
+      value: `$${totalRevenue.toFixed(2)}`,
+      trend: "",
       icon: DollarSign,
       color: "green",
     },
