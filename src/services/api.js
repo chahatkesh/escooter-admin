@@ -19,33 +19,17 @@ export const scooterApi = axios.create({
   },
 });
 
-// Add request interceptor to add auth token
-const addAuthToken = (config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-};
-
-// Add response interceptor to handle common errors
+// Simple response interceptor for basic error handling
 const handleResponse = (response) => {
   return response;
 };
 
 const handleError = (error) => {
-  // Handle unauthorized errors (redirect to login)
-  if (error.response && error.response.status === 401) {
-    localStorage.removeItem('token');
-    window.location.href = '/login';
-  }
+  console.error('API Error:', error);
   return Promise.reject(error);
 };
 
-// Apply interceptors
-authApi.interceptors.request.use(addAuthToken);
-scooterApi.interceptors.request.use(addAuthToken);
-
+// Apply basic error handling interceptors
 authApi.interceptors.response.use(handleResponse, handleError);
 scooterApi.interceptors.response.use(handleResponse, handleError);
 
