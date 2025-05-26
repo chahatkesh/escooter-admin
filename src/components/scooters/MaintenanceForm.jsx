@@ -1,52 +1,61 @@
-// src/components/scooters/ScooterForm.jsx
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
 import PropTypes from "prop-types";
 
-const ScooterForm = ({ scooter, onClose, onSubmit }) => {
+const MaintenanceForm = ({ scooter, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
-    name: "",
-    status: "available",
-    batteryLevel: 100,
-    lastStation: "",
-    location: "",
+    reason: "",
+    priority: "medium",
+    scheduledDate: "",
+    notes: "",
   });
 
   useEffect(() => {
     if (scooter) {
       setFormData({
-        name: scooter.name || "",
-        status: scooter.status || "available",
-        batteryLevel: scooter.batteryLevel || 100,
-        lastStation: scooter.lastStation || "",
-        location: scooter.location || "",
+        reason: "",
+        priority: "medium",
+        scheduledDate: new Date().toISOString().split("T")[0],
+        notes: "",
       });
     }
   }, [scooter]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Format the data according to API requirements
+    const submitData = {
+      reason: formData.reason,
+      priority: formData.priority,
+      scheduledDate: new Date(formData.scheduledDate).toISOString(),
+      maintenanceNote: formData.notes,
+    };
+    onSubmit(submitData);
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "batteryLevel" ? parseInt(value) || 0 : value,
+      [name]: value,
     }));
   };
 
-  const validateLocation = (location) => {
-    const coords = location.split(",").map((coord) => parseFloat(coord.trim()));
-    return coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1]);
+  const validateDate = (date) => {
+    const selectedDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return selectedDate >= today;
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!validateLocation(formData.location)) {
-      alert(
-        "Please enter a valid location in the format: latitude,longitude (e.g., 40.7128,-74.0060)"
-      );
+  const handleDateChange = (e) => {
+    const { value } = e.target;
+    if (!validateDate(value)) {
+      alert("Please select a future date");
       return;
     }
-    onSubmit(formData);
+    handleChange(e);
   };
 
   return (
@@ -61,9 +70,7 @@ const ScooterForm = ({ scooter, onClose, onSubmit }) => {
         exit={{ scale: 0.9, opacity: 0 }}
         className="bg-white rounded-lg p-6 w-full max-w-md">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">
-            {scooter ? "Edit Scooter" : "Add New Scooter"}
-          </h2>
+          <h2 className="text-xl font-semibold">Schedule Maintenance</h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700">
@@ -74,46 +81,57 @@ const ScooterForm = ({ scooter, onClose, onSubmit }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Name
+              Scooter ID
             </label>
             <input
               type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              placeholder="Enter scooter name"
+              value={scooter?._id || ""}
+              disabled
+              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Status
+              Reason for Maintenance
+            </label>
+            <textarea
+              name="reason"
+              value={formData.reason}
+              onChange={handleChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              placeholder="Enter reason for maintenance"
+              rows="3"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Priority
             </label>
             <select
-              name="status"
-              value={formData.status}
+              name="priority"
+              value={formData.priority}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md">
-              <option value="available">Available</option>
-              <option value="in_use">In Use</option>
-              <option value="maintenance">Maintenance</option>
-              <option value="offline">Offline</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
             </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Battery Level (%)
+              Scheduled Date
             </label>
             <input
-              type="number"
-              name="batteryLevel"
-              value={formData.batteryLevel}
-              onChange={handleChange}
-              min="0"
-              max="100"
+              type="date"
+              name="scheduledDate"
+              value={formData.scheduledDate}
+              onChange={handleDateChange}
+              min={new Date().toISOString().split("T")[0]}
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
             />
@@ -121,31 +139,15 @@ const ScooterForm = ({ scooter, onClose, onSubmit }) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Current Station
+              Additional Notes
             </label>
-            <input
-              type="text"
-              name="lastStation"
-              value={formData.lastStation}
+            <textarea
+              name="notes"
+              value={formData.notes}
               onChange={handleChange}
-              required
               className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              placeholder="Enter station name"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Location (lat,long)
-            </label>
-            <input
-              type="text"
-              name="location"
-              value={formData.location}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              placeholder="Enter location (e.g., 40.7128,-74.0060)"
+              placeholder="Enter any additional notes"
+              rows="3"
             />
           </div>
 
@@ -159,7 +161,7 @@ const ScooterForm = ({ scooter, onClose, onSubmit }) => {
             <button
               type="submit"
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
-              {scooter ? "Update Scooter" : "Add Scooter"}
+              Schedule Maintenance
             </button>
           </div>
         </form>
@@ -168,17 +170,12 @@ const ScooterForm = ({ scooter, onClose, onSubmit }) => {
   );
 };
 
-ScooterForm.propTypes = {
+MaintenanceForm.propTypes = {
   scooter: PropTypes.shape({
-    _id: PropTypes.string,
-    name: PropTypes.string,
-    status: PropTypes.string,
-    batteryLevel: PropTypes.number,
-    lastStation: PropTypes.string,
-    location: PropTypes.string,
-  }),
+    _id: PropTypes.string.isRequired,
+  }).isRequired,
   onClose: PropTypes.func.isRequired,
   onSubmit: PropTypes.func.isRequired,
 };
 
-export default ScooterForm;
+export default MaintenanceForm;

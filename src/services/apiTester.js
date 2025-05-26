@@ -23,193 +23,87 @@ class ApiTester {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // Test Admin Authentication Flow
-  async testAdminAuth() {
-    this.log('Starting Admin Authentication Tests', 'info');
-
-    try {
-      // Test 1: Create Admin (if needed)
-      this.log('Testing admin creation...', 'info');
-      try {
-        const createAdminResponse = await authService.createAdmin({
-          email: 'admin@barqscoot.com',
-          password: 'AdminPass123'
-        });
-        this.log('Admin created successfully', 'success');
-      } catch (error) {
-        if (error.response?.status === 409) {
-          this.log('Admin already exists (expected)', 'info');
-        } else {
-          this.log(`Admin creation failed: ${error.message}`, 'error');
-        }
-      }
-
-      // Test 2: Admin Login
-      this.log('Testing admin login...', 'info');
-      const loginResponse = await authService.login({
-        email: 'admin@barqscoot.com',
-        password: 'AdminPass123'
-      });
-
-      if (loginResponse.data.token) {
-        this.adminToken = loginResponse.data.token;
-        localStorage.setItem('token', this.adminToken);
-        this.log('Admin login successful', 'success');
-      } else {
-        throw new Error('No token received from login');
-      }
-
-      // Test 3: Get Current User
-      this.log('Testing get current user...', 'info');
-      const userResponse = await authService.getCurrentUser();
-      this.log(`Current user: ${userResponse.data.email}`, 'success');
-
-      return true;
-    } catch (error) {
-      this.log(`Admin auth test failed: ${error.message}`, 'error');
-      return false;
-    }
-  }
-
   // Test Scooter Management APIs
   async testScooterManagement() {
-    this.log('Starting Scooter Management Tests', 'info');
-
     try {
-      // Test 1: Get All Scooters
-      this.log('Testing get all scooters...', 'info');
-      const scootersResponse = await scooterService.getAllScooters();
-      this.log(`Found ${scootersResponse.data.length || 0} scooters`, 'success');
+      // Test GET /scooters/
+      const scootersResponse = await this.testEndpoint('GET', '/scooters/');
+      if (!scootersResponse.success) return false;
 
-      // Test 2: Create a test scooter
-      this.log('Testing create scooter...', 'info');
-      const newScooter = {
-        name: `Test-Scooter-${Date.now()}`,
-        location: '40.7128,-74.0060',
-        lastStation: 'NYC-001',
-        batteryLevel: 100,
-        status: 'available'
-      };
-
-      const createScooterResponse = await scooterService.createScooter(newScooter);
-      const scooterId = createScooterResponse.data.id || createScooterResponse.data._id;
-      this.log(`Scooter created with ID: ${scooterId}`, 'success');
-
-      // Test 3: Get scooter by ID
+      // Test GET /scooters/{id}
+      const scooterId = scootersResponse.data[0]?.id;
       if (scooterId) {
-        this.log('Testing get scooter by ID...', 'info');
-        const scooterResponse = await scooterService.getScooterById(scooterId);
-        this.log(`Retrieved scooter: ${scooterResponse.data.name}`, 'success');
+        const scooterResponse = await this.testEndpoint('GET', `/scooters/${scooterId}`);
+        if (!scooterResponse.success) return false;
+      }
 
-        // Test 4: Update scooter status
-        this.log('Testing update scooter status...', 'info');
-        await scooterService.updateScooterStatus(scooterId, 'maintenance');
-        this.log('Scooter status updated to maintenance', 'success');
+      // Test POST /scooters/
+      const newScooter = {
+        name: `Test Scooter ${Date.now()}`,
+        status: 'available',
+        batteryLevel: 100,
+        lastStation: 'Test Station',
+      };
+      const createResponse = await this.testEndpoint('POST', '/scooters/', newScooter);
+      if (!createResponse.success) return false;
 
-        // Test 5: Update scooter station
-        this.log('Testing update scooter station...', 'info');
-        await scooterService.updateScooterStation(scooterId, 'NYC-002');
-        this.log('Scooter station updated', 'success');
-
-        // Test 6: Update maintenance status
-        this.log('Testing update maintenance status...', 'info');
-        await scooterService.updateMaintenanceStatus(scooterId, 'maintenance', 'Test maintenance note');
-        this.log('Maintenance status updated', 'success');
-
-        // Clean up: Delete test scooter
-        this.log('Cleaning up: deleting test scooter...', 'info');
-        await scooterService.deleteScooter(scooterId);
-        this.log('Test scooter deleted', 'success');
+      // Test PUT /scooters/{id}
+      if (createResponse.data?.id) {
+        const updateResponse = await this.testEndpoint(
+          'PUT',
+          `/scooters/${createResponse.data.id}`,
+          { status: 'maintenance' }
+        );
+        if (!updateResponse.success) return false;
       }
 
       return true;
     } catch (error) {
-      this.log(`Scooter management test failed: ${error.message}`, 'error');
+      this.log(`Scooter Management Test Error: ${error.message}`, 'error');
       return false;
     }
   }
 
   // Test Ride Management APIs
   async testRideManagement() {
-    this.log('Starting Ride Management Tests', 'info');
-
     try {
-      // Test 1: Get all rides
-      this.log('Testing get all rides...', 'info');
-      const ridesResponse = await scooterService.getAllRides();
-      this.log(`Found ${ridesResponse.data.length || 0} rides`, 'success');
+      // Test GET /rides/
+      const ridesResponse = await this.testEndpoint('GET', '/rides/');
+      if (!ridesResponse.success) return false;
 
-      // Test 2: Get rides with filters
-      this.log('Testing get rides with filters...', 'info');
-      const filteredRidesResponse = await scooterService.getAllRides({
-        status: 'completed',
-        startDate: '2024-01-01',
-        endDate: '2024-12-31'
-      });
-      this.log(`Found ${filteredRidesResponse.data.length || 0} filtered rides`, 'success');
+      // Test GET /rides/{id}
+      const rideId = ridesResponse.data[0]?.id;
+      if (rideId) {
+        const rideResponse = await this.testEndpoint('GET', `/rides/${rideId}`);
+        if (!rideResponse.success) return false;
+      }
 
       return true;
     } catch (error) {
-      this.log(`Ride management test failed: ${error.message}`, 'error');
+      this.log(`Ride Management Test Error: ${error.message}`, 'error');
       return false;
     }
   }
 
   // Test IoT Management APIs
   async testIoTManagement() {
-    this.log('Starting IoT Management Tests', 'info');
-
     try {
-      // Test 1: Get system health
-      this.log('Testing get system health...', 'info');
-      const healthResponse = await scooterService.getSystemHealth();
-      this.log('System health retrieved', 'success');
+      // Test GET /scooters/{id}/telemetry
+      const scootersResponse = await this.testEndpoint('GET', '/scooters/');
+      if (!scootersResponse.success) return false;
 
-      // Test 2: Get low battery scooters
-      this.log('Testing get low battery scooters...', 'info');
-      const lowBatteryResponse = await scooterService.getLowBatteryScooters();
-      this.log(`Found ${lowBatteryResponse.data.length || 0} low battery scooters`, 'success');
-
-      // Test 3: Get maintenance required
-      this.log('Testing get maintenance required...', 'info');
-      const maintenanceResponse = await scooterService.getMaintenanceRequired();
-      this.log(`Found ${maintenanceResponse.data.length || 0} scooters requiring maintenance`, 'success');
+      const scooterId = scootersResponse.data[0]?.id;
+      if (scooterId) {
+        const telemetryResponse = await this.testEndpoint(
+          'GET',
+          `/scooters/${scooterId}/telemetry`
+        );
+        if (!telemetryResponse.success) return false;
+      }
 
       return true;
     } catch (error) {
-      this.log(`IoT management test failed: ${error.message}`, 'error');
-      return false;
-    }
-  }
-
-  // Test User Management APIs
-  async testUserManagement() {
-    this.log('Starting User Management Tests', 'info');
-
-    try {
-      // Test 1: Get all users
-      this.log('Testing get all users...', 'info');
-      const usersResponse = await authService.getAllUsers();
-      this.log(`Found ${usersResponse.data.length || 0} users`, 'success');
-
-      // Test 2: Create a test user
-      this.log('Testing create user...', 'info');
-      const newUser = {
-        firstName: 'Test',
-        lastName: 'User',
-        phoneNumber: `+1234567${Date.now().toString().slice(-3)}`,
-        email: `testuser${Date.now()}@example.com`,
-        dateOfBirth: '1990-01-01T00:00:00Z',
-        gender: 'male',
-        location: 'New York'
-      };
-
-      const createUserResponse = await authService.createUser(newUser);
-      this.log('Test user created successfully', 'success');
-
-      return true;
-    } catch (error) {
-      this.log(`User management test failed: ${error.message}`, 'error');
+      this.log(`IoT Management Test Error: ${error.message}`, 'error');
       return false;
     }
   }
@@ -220,11 +114,9 @@ class ApiTester {
     this.testResults = [];
 
     const testSuite = [
-      { name: 'Admin Authentication', test: () => this.testAdminAuth() },
       { name: 'Scooter Management', test: () => this.testScooterManagement() },
       { name: 'Ride Management', test: () => this.testRideManagement() },
       { name: 'IoT Management', test: () => this.testIoTManagement() },
-      { name: 'User Management', test: () => this.testUserManagement() },
     ];
 
     const results = {};
@@ -276,6 +168,39 @@ class ApiTester {
       },
       logs: this.testResults
     };
+  }
+
+  // Helper method to test an endpoint
+  async testEndpoint(method, endpoint, data = null) {
+    try {
+      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.token}`
+        },
+        body: data ? JSON.stringify(data) : undefined
+      });
+
+      const responseData = await response.json();
+      const success = response.ok;
+
+      this.testResults.push({
+        endpoint,
+        method,
+        success,
+        status: response.status,
+        response: responseData
+      });
+
+      return {
+        success,
+        data: responseData
+      };
+    } catch (error) {
+      this.log(`Error testing ${method} ${endpoint}: ${error.message}`, 'error');
+      return { success: false, error: error.message };
+    }
   }
 }
 

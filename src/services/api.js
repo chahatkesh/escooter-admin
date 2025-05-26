@@ -201,6 +201,9 @@ export const scooterService = {
   createScooter: (scooterData) =>
     scooterApi.post('/scooters/admin/', scooterData),
 
+  updateScooter: (scooterId, scooterData) =>
+    scooterApi.put(`/scooters/admin/${scooterId}`, scooterData),
+
   updateScooterStatus: (scooterId, status) =>
     scooterApi.put(`/scooters/admin/${scooterId}/status`, { status }),
 
@@ -238,8 +241,8 @@ export const scooterService = {
     return scooterApi.get(`/iot/telemetry/${scooterId}/history?${params}`);
   },
 
-  scheduleMaintenance: (scooterId, reason) =>
-    scooterApi.post(`/iot/maintenance/${scooterId}`, { reason }),
+  scheduleMaintenance: (scooterId, maintenanceData) =>
+    scooterApi.post(`/scooters/admin/${scooterId}/maintenance`, maintenanceData),
 
   getMaintenanceRequired: () =>
     scooterApi.get('/iot/maintenance/required'),

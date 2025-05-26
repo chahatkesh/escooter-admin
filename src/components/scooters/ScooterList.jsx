@@ -1,265 +1,237 @@
 // src/components/scooters/ScooterList.jsx
 import { useState } from "react";
-import { motion } from "framer-motion";
-import {
-  Search,
-  Filter,
-  Battery,
-  MapPin,
-  Settings,
-  Plus,
-  AlertCircle,
-  Loader,
-} from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { scooterService } from "../../services/api";
+import { Plus, Search, Battery, Wrench, MapPin, Activity } from "lucide-react";
+import PropTypes from "prop-types";
 
-const ScooterList = ({ onScooterSelect, onAddScooter }) => {
-  const [filterStatus, setFilterStatus] = useState("");
-  const [filterBattery, setFilterBattery] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
-
-  // Fetch scooters with React Query
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["scooters", filterStatus, filterBattery],
-    queryFn: async () => {
-      const filters = {};
-      if (filterStatus) filters.status = filterStatus;
-      if (filterBattery) filters.minBattery = filterBattery;
-      const response = await scooterService.getAllScooters(filters);
-      return response.data;
-    },
-  });
-
-  // Apply client-side search filter
-  const filteredScooters =
-    data?.filter(
-      (scooter) =>
-        searchTerm === "" ||
-        scooter.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        scooter.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (scooter.location &&
-          typeof scooter.location === "string" &&
-          scooter.location.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (scooter.lastStation &&
-          scooter.lastStation.toLowerCase().includes(searchTerm.toLowerCase()))
-    ) || [];
+const ScooterList = ({
+  scooters,
+  isLoading,
+  lowBatteryScooters,
+  maintenanceRequiredScooters,
+  onScooterSelect,
+  onAddScooter,
+  onEditScooter,
+  onMaintenance,
+  onViewTelemetry,
+  filters,
+  onFilterChange,
+}) => {
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearch = (e) => {
-    const term = e.target.value;
-    setSearchTerm(term);
+    setSearchQuery(e.target.value);
+  };
+
+  const filteredScooters = scooters?.filter((scooter) => {
+    const matchesSearch = scooter.name
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const matchesStatus = !filters.status || scooter.status === filters.status;
+    const matchesBattery =
+      !filters.minBattery ||
+      scooter.batteryLevel >= parseInt(filters.minBattery);
+    const matchesStation =
+      !filters.station || scooter.lastStation === filters.station;
+
+    return matchesSearch && matchesStatus && matchesBattery && matchesStation;
+  });
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "available":
+        return "bg-green-100 text-green-800";
+      case "in_use":
+        return "bg-blue-100 text-blue-800";
+      case "maintenance":
+        return "bg-red-100 text-red-800";
+      case "offline":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
   };
 
   const getBatteryColor = (level) => {
-    if (level > 70) return "text-green-500";
-    if (level > 30) return "text-yellow-500";
-    return "text-red-500";
-  };
-
-  const getStatusBadge = (status) => {
-    const styles = {
-      available: "bg-green-100 text-green-800",
-      "in-use": "bg-blue-100 text-blue-800",
-      maintenance: "bg-orange-100 text-orange-800",
-      offline: "bg-gray-100 text-gray-800",
-    };
-    return styles[status] || "bg-gray-100 text-gray-800";
+    if (level <= 20) return "text-red-500";
+    if (level <= 50) return "text-yellow-500";
+    return "text-green-500";
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      {/* Header */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <h2 className="text-xl font-semibold text-gray-800">Scooters</h2>
-          <div className="mt-4 md:mt-0">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={onAddScooter}
-              className="inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Add New Scooter
-            </motion.button>
-          </div>
-        </div>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-semibold">Scooters</h2>
+        <button
+          onClick={onAddScooter}
+          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+          <Plus size={20} className="mr-2" />
+          Add Scooter
+        </button>
+      </div>
 
-        {/* Search and Filter */}
-        <div className="mt-6 flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="Search scooters..."
-              value={searchTerm}
+              value={searchQuery}
               onChange={handleSearch}
-              className="pl-10 pr-4 py-2 w-full border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setShowFilters(!showFilters)}
-            className="inline-flex items-center px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50">
-            <Filter className="w-4 h-4 mr-2" />
-            Filters
-          </motion.button>
-          <button
-            onClick={() => refetch()}
-            className="inline-flex items-center px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50">
-            Refresh
-          </button>
         </div>
 
-        {showFilters && (
-          <div className="mt-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
-                </label>
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg p-2">
-                  <option value="">All Statuses</option>
-                  <option value="available">Available</option>
-                  <option value="in-use">In Use</option>
-                  <option value="maintenance">Maintenance</option>
-                  <option value="offline">Offline</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Min Battery
-                </label>
-                <select
-                  value={filterBattery}
-                  onChange={(e) => setFilterBattery(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg p-2">
-                  <option value="">Any Battery</option>
-                  <option value="20">At least 20%</option>
-                  <option value="50">At least 50%</option>
-                  <option value="80">At least 80%</option>
-                </select>
-              </div>
-            </div>
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={() => {
-                  setFilterStatus("");
-                  setFilterBattery("");
-                }}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">
-                Clear Filters
-              </button>
-            </div>
-          </div>
-        )}
+        <div className="flex gap-2">
+          <select
+            value={filters.status}
+            onChange={(e) => onFilterChange({ status: e.target.value })}
+            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">All Status</option>
+            <option value="available">Available</option>
+            <option value="in_use">In Use</option>
+            <option value="maintenance">Maintenance</option>
+            <option value="offline">Offline</option>
+          </select>
+
+          <select
+            value={filters.minBattery}
+            onChange={(e) => onFilterChange({ minBattery: e.target.value })}
+            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">All Battery Levels</option>
+            <option value="20">20%+</option>
+            <option value="50">50%+</option>
+            <option value="80">80%+</option>
+          </select>
+
+          <input
+            type="text"
+            placeholder="Station"
+            value={filters.station}
+            onChange={(e) => onFilterChange({ station: e.target.value })}
+            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
       </div>
 
-      {/* Scooter Grid */}
-      <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {isLoading ? (
-          <div className="col-span-3 flex justify-center items-center py-12">
-            <Loader className="w-8 h-8 text-teal-500 animate-spin" />
-            <span className="ml-2 text-gray-600">Loading scooters...</span>
-          </div>
-        ) : isError ? (
-          <div className="col-span-3 flex justify-center items-center py-12 text-red-500">
-            <AlertCircle className="w-6 h-6 mr-2" />
-            <span>Error loading scooters. Please try again.</span>
-          </div>
-        ) : filteredScooters.length === 0 ? (
-          <div className="col-span-3 flex justify-center items-center py-12 text-gray-500">
-            No scooters found
-          </div>
-        ) : (
-          filteredScooters.map((scooter) => (
-            <motion.div
-              key={scooter.id || scooter._id}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => onScooterSelect(scooter)}
-              className="bg-white p-6 rounded-lg border border-gray-200 hover:shadow-md cursor-pointer">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-lg font-semibold text-gray-800">
-                  {scooter.name || scooter.id || "Unknown"}
-                </span>
-                <span
-                  className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(
-                    scooter.status || "unknown"
-                  )}`}>
-                  {scooter.status || "Unknown"}
-                </span>
-              </div>
+      {isLoading ? (
+        <div className="text-center py-8">Loading scooters...</div>
+      ) : filteredScooters?.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">No scooters found</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredScooters?.map((scooter) => {
+            const isLowBattery = lowBatteryScooters?.some(
+              (s) => s.id === scooter.id
+            );
+            const needsMaintenance = maintenanceRequiredScooters?.some(
+              (s) => s.id === scooter.id
+            );
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center text-gray-600">
-                    <Battery
-                      className={`w-4 h-4 mr-2 ${getBatteryColor(
-                        scooter.batteryLevel || 0
-                      )}`}
-                    />
-                    <span>{scooter.batteryLevel || 0}%</span>
-                  </div>
-                  <div className="flex items-center text-gray-600">
-                    <Settings className="w-4 h-4 mr-2" />
-                    <span>{scooter.model || "Standard"}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center text-gray-600">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  <span>
-                    {scooter.lastStation || scooter.location || "Unknown"}
+            return (
+              <div
+                key={scooter.id}
+                className="bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => onScooterSelect(scooter)}>
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="text-lg font-semibold">{scooter.name}</h3>
+                  <span
+                    className={`px-2 py-1 rounded-full text-sm ${getStatusColor(
+                      scooter.status
+                    )}`}>
+                    {scooter.status}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between text-sm text-gray-500">
-                  {scooter.lastMaintenance && (
-                    <span>
-                      Last Maintenance:{" "}
-                      {new Date(scooter.lastMaintenance).toLocaleDateString()}
-                    </span>
-                  )}
-                  {scooter.totalRides !== undefined && (
-                    <span>{scooter.totalRides} rides</span>
+                <div className="space-y-2">
+                  <div className="flex items-center text-sm">
+                    <Battery
+                      className={`mr-2 ${getBatteryColor(
+                        scooter.batteryLevel
+                      )}`}
+                      size={16}
+                    />
+                    <span>Battery: {scooter.batteryLevel}%</span>
+                    {isLowBattery && (
+                      <span className="ml-2 text-red-500 text-xs">
+                        (Low Battery)
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center text-sm text-gray-600">
+                    <MapPin className="mr-2" size={16} />
+                    <span>Station: {scooter.lastStation}</span>
+                  </div>
+
+                  {needsMaintenance && (
+                    <div className="flex items-center text-sm text-red-500">
+                      <Wrench className="mr-2" size={16} />
+                      <span>Maintenance Required</span>
+                    </div>
                   )}
                 </div>
-              </div>
-            </motion.div>
-          ))
-        )}
-      </div>
 
-      {/* Pagination */}
-      <div className="px-6 py-4 border-t border-gray-200">
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-500">
-            Showing {filteredScooters.length} scooters
-            {isLoading && (
-              <span className="ml-2 text-teal-500">(Loading...)</span>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <button
-              className="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-              disabled>
-              Previous
-            </button>
-            <button
-              className="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-              disabled>
-              Next
-            </button>
-          </div>
+                <div className="mt-4 flex justify-end space-x-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditScooter(scooter);
+                    }}
+                    className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded">
+                    Edit
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMaintenance(scooter);
+                    }}
+                    className="px-3 py-1 text-sm text-orange-600 hover:bg-orange-50 rounded">
+                    Maintenance
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onViewTelemetry(scooter);
+                    }}
+                    className="px-3 py-1 text-sm text-purple-600 hover:bg-purple-50 rounded">
+                    <Activity size={16} className="inline-block" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </div>
+      )}
     </div>
   );
+};
+
+ScooterList.propTypes = {
+  scooters: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      name: PropTypes.string.isRequired,
+      status: PropTypes.string.isRequired,
+      batteryLevel: PropTypes.number.isRequired,
+      lastStation: PropTypes.string.isRequired,
+    })
+  ),
+  isLoading: PropTypes.bool,
+  lowBatteryScooters: PropTypes.array,
+  maintenanceRequiredScooters: PropTypes.array,
+  onScooterSelect: PropTypes.func.isRequired,
+  onAddScooter: PropTypes.func.isRequired,
+  onEditScooter: PropTypes.func.isRequired,
+  onMaintenance: PropTypes.func.isRequired,
+  onViewTelemetry: PropTypes.func.isRequired,
+  filters: PropTypes.shape({
+    status: PropTypes.string,
+    minBattery: PropTypes.string,
+    station: PropTypes.string,
+  }).isRequired,
+  onFilterChange: PropTypes.func.isRequired,
 };
 
 export default ScooterList;
