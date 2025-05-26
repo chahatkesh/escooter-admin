@@ -188,15 +188,11 @@ export const scooterService = {
     const params = new URLSearchParams();
     if (filters.status) params.append('status', filters.status);
     if (filters.minBattery) params.append('minBattery', filters.minBattery);
-
     return scooterApi.get(`/scooters/?${params}`);
   },
 
   getScooterById: (scooterId) =>
     scooterApi.get(`/scooters/${scooterId}`),
-
-  getScootersByStation: (stationId) =>
-    scooterApi.get(`/scooters/station/${stationId}`),
 
   createScooter: (scooterData) =>
     scooterApi.post('/scooters/admin/', scooterData),
@@ -207,29 +203,25 @@ export const scooterService = {
   updateScooterStatus: (scooterId, status) =>
     scooterApi.put(`/scooters/admin/${scooterId}/status`, { status }),
 
-  updateScooterStation: (scooterId, station) =>
-    scooterApi.put(`/scooters/admin/${scooterId}/station`, { station }),
-
-  updateMaintenanceStatus: (scooterId, status, maintenanceNote) =>
-    scooterApi.put(`/scooters/admin/${scooterId}/maintenance`, {
-      status,
-      maintenanceNote
-    }),
-
   deleteScooter: (scooterId) =>
     scooterApi.delete(`/scooters/admin/${scooterId}`),
 
-  // Ride management
+  // Ride/Booking management
   getAllRides: (filters = {}) => {
     const params = new URLSearchParams();
     if (filters.status) params.append('status', filters.status);
     if (filters.startDate) params.append('startDate', filters.startDate);
     if (filters.endDate) params.append('endDate', filters.endDate);
-
     return scooterApi.get(`/rides/all?${params}`);
   },
 
-  // IoT Admin Routes
+  getRideById: (rideId) =>
+    scooterApi.get(`/rides/${rideId}`),
+
+  endRide: (rideId) =>
+    scooterApi.put(`/rides/${rideId}/end`),
+
+  // IoT Management
   getLatestTelemetry: (scooterId) =>
     scooterApi.get(`/iot/telemetry/${scooterId}`),
 
@@ -237,12 +229,8 @@ export const scooterService = {
     const params = new URLSearchParams();
     if (startDate) params.append('start', startDate);
     if (endDate) params.append('end', endDate);
-
     return scooterApi.get(`/iot/telemetry/${scooterId}/history?${params}`);
   },
-
-  scheduleMaintenance: (scooterId, maintenanceData) =>
-    scooterApi.post(`/scooters/admin/${scooterId}/maintenance`, maintenanceData),
 
   getMaintenanceRequired: () =>
     scooterApi.get('/iot/maintenance/required'),

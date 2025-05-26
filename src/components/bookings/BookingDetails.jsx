@@ -1,8 +1,8 @@
 // src/components/bookings/BookingDetails.jsx
-import React from "react";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { scooterService } from "../../services/api";
+import PropTypes from "prop-types";
 import {
   ChevronLeft,
   User,
@@ -17,20 +17,19 @@ import {
 } from "lucide-react";
 
 const BookingDetails = ({ booking, onBack }) => {
-  // Fetch detailed booking info if needed
-  // const queryClient = useQueryClient();
-  // const { data: bookingDetails, isLoading } = useQuery({
-  //   queryKey: ["booking", booking.id],
-  //   queryFn: async () => {
-  //     const response = await scooterService.getRideById(booking.id);
-  //     return response.data;
-  //   },
-  //   enabled: !!booking?.id, // Only run query if we have a booking id
-  // });
+  const queryClient = useQueryClient();
 
-  // We're using the booking prop data for now
-  // const currentBooking = bookingDetails || booking;
-  const currentBooking = booking;
+  // Fetch detailed booking info
+  const { data: bookingDetails, isLoading } = useQuery({
+    queryKey: ["booking", booking.id],
+    queryFn: async () => {
+      const response = await scooterService.getRideById(booking.id);
+      return response.data;
+    },
+    enabled: !!booking?.id,
+  });
+
+  const currentBooking = bookingDetails || booking;
 
   const getStatusColor = (status) => {
     const colors = {
@@ -40,8 +39,9 @@ const BookingDetails = ({ booking, onBack }) => {
       pending: "text-yellow-600",
     };
     return colors[status] || "text-gray-600";
-  }; // End ride mutation (for active rides)
-  const queryClient = useQueryClient();
+  };
+
+  // End ride mutation (for active rides)
   const endRideMutation = useMutation({
     mutationFn: () => scooterService.endRide(currentBooking.id),
     onSuccess: () => {
@@ -60,11 +60,19 @@ const BookingDetails = ({ booking, onBack }) => {
     }
   };
 
-  if (!currentBooking) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader className="animate-spin mr-2" />
         <span>Loading booking details...</span>
+      </div>
+    );
+  }
+
+  if (!currentBooking) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <span className="text-red-500">Booking not found</span>
       </div>
     );
   }
@@ -92,7 +100,7 @@ const BookingDetails = ({ booking, onBack }) => {
                   currentBooking?.status?.slice(1)}
               </p>
             </div>
-          </div>{" "}
+          </div>
           {currentBooking?.status === "active" && (
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -265,6 +273,23 @@ const BookingDetails = ({ booking, onBack }) => {
       )}
     </div>
   );
+};
+
+BookingDetails.propTypes = {
+  booking: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    userId: PropTypes.string,
+    userName: PropTypes.string,
+    scooterId: PropTypes.string,
+    startTime: PropTypes.string,
+    endTime: PropTypes.string,
+    duration: PropTypes.number,
+    distance: PropTypes.number,
+    amount: PropTypes.number,
+    status: PropTypes.string,
+    location: PropTypes.string,
+  }).isRequired,
+  onBack: PropTypes.func.isRequired,
 };
 
 export default BookingDetails;
