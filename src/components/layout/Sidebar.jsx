@@ -2,25 +2,13 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { motion } from "framer-motion";
-import {
-  LayoutDashboard,
-  Users,
-  Bike,
-  Calendar,
-  ChartBar,
-  Gift,
-  Settings,
-  LogOut,
-} from "lucide-react";
+import { LayoutDashboard, Users, Bike, Calendar, LogOut } from "lucide-react";
 
 const menuItems = [
   { path: "/", icon: LayoutDashboard, label: "Dashboard" },
   { path: "/users", icon: Users, label: "Users" },
   { path: "/scooters", icon: Bike, label: "Scooters" },
   { path: "/bookings", icon: Calendar, label: "Bookings" },
-  { path: "/reports", icon: ChartBar, label: "Reports" },
-  { path: "/promotions", icon: Gift, label: "Promotions" },
-  { path: "/settings", icon: Settings, label: "Settings" },
 ];
 
 const Sidebar = () => {

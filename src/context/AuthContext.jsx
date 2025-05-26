@@ -27,8 +27,9 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      // Add a small delay before making the request
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Trim the token to ensure no whitespace issues
+      const cleanToken = token.trim();
+      localStorage.setItem("token", cleanToken);
 
       console.log("Making getCurrentUser request with token");
       const response = await authService.getCurrentUser();
@@ -87,12 +88,9 @@ export const AuthProvider = ({ children }) => {
 
       if (token) {
         console.log("Token received, storing in localStorage");
-        // Store token and user data
-        localStorage.setItem("token", token);
+        // Token is already stored by the API service
         setUser(admin);
         setIsAuthenticated(true);
-
-        // Don't call checkAuth immediately after login
         console.log("Login successful, user authenticated");
         return { success: true };
       } else {

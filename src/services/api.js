@@ -9,6 +9,7 @@ export const authApi = axios.create({
   baseURL: AUTH_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json'
   },
 });
 
@@ -16,6 +17,7 @@ export const scooterApi = axios.create({
   baseURL: SCOOTER_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json'
   },
 });
 
@@ -31,8 +33,19 @@ authApi.interceptors.request.use(
   (config) => {
     const token = getToken();
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      console.log('Added token to request headers:', config.url);
+      // Ensure proper Bearer token format and trim any whitespace
+      const cleanToken = token.trim();
+      config.headers.Authorization = `Bearer ${cleanToken}`;
+      // Add admin token header
+      config.headers['X-Admin-Token'] = 'true';
+      // Add additional headers for debugging
+      config.headers['X-Request-Type'] = 'admin';
+      console.log('Added token to request headers:', {
+        url: config.url,
+        tokenLength: cleanToken.length,
+        headers: config.headers,
+        token: cleanToken // Log the actual token for debugging
+      });
     } else {
       console.log('No token available for request:', config.url);
     }
@@ -45,7 +58,18 @@ scooterApi.interceptors.request.use(
   (config) => {
     const token = getToken();
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      // Ensure proper Bearer token format and trim any whitespace
+      const cleanToken = token.trim();
+      config.headers.Authorization = `Bearer ${cleanToken}`;
+      // Add admin token header
+      config.headers['X-Admin-Token'] = 'true';
+      console.log('Added token to request headers:', {
+        url: config.url,
+        tokenLength: cleanToken.length,
+        headers: config.headers
+      });
+    } else {
+      console.log('No token available for request:', config.url);
     }
     return config;
   },
@@ -54,7 +78,11 @@ scooterApi.interceptors.request.use(
 
 // Response interceptors for error handling
 const handleResponse = (response) => {
-  console.log('API Response:', response.config.url, response.status);
+  console.log('API Response:', {
+    url: response.config.url,
+    status: response.status,
+    data: response.data
+  });
   return response;
 };
 
@@ -68,12 +96,9 @@ const handleError = (error) => {
 
   // Handle unauthorized access
   if (error.response?.status === 401) {
-    // Only redirect if we're not already on the login page
-    if (!window.location.pathname.includes('/login')) {
-      console.log('Unauthorized access, redirecting to login');
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
+    console.log('Unauthorized access, token might be invalid');
+    // Don't redirect immediately, let the auth context handle it
+    return Promise.reject(error);
   }
 
   return Promise.reject(error);
@@ -89,11 +114,48 @@ export const authService = {
   createAdmin: (adminData) =>
     authApi.post('/admin/create', adminData),
 
-  login: (credentials) =>
-    authApi.post('/admin/login', credentials),
+  login: async (credentials) => {
+    try {
+      const response = await authApi.post('/admin/login', credentials);
+      // Store token immediately after successful login
+      if (response.data.token) {
+        const token = response.data.token.trim();
+        localStorage.setItem('token', token);
+        console.log('Stored token after login:', {
+          tokenLength: token.length,
+          token: token // Log the actual token for debugging
+        });
+      }
+      return response;
+    } catch (error) {
+      console.error('Login error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
+      throw error;
+    }
+  },
 
-  getCurrentUser: () =>
-    authApi.get('/admin/me'),
+  getCurrentUser: async () => {
+    try {
+      const response = await authApi.get('/admin/me');
+      console.log('getCurrentUser response:', {
+        status: response.status,
+        data: response.data,
+        headers: response.headers
+      });
+      return response;
+    } catch (error) {
+      console.error('getCurrentUser error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+        headers: error.response?.headers
+      });
+      throw error;
+    }
+  },
 
   // User management
   getAllUsers: () =>

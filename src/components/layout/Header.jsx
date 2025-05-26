@@ -56,15 +56,6 @@ const Header = ({ onMenuClick }) => {
               )}
             </motion.button>
 
-            <motion.div whileTap={{ scale: 0.95 }} className="relative">
-              <Link
-                to="/notifications"
-                className="p-2 rounded-lg hover:bg-gray-100">
-                <Bell className="h-5 w-5 text-gray-600" />
-                <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-              </Link>
-            </motion.div>
-
             <motion.div
               whileHover={{ scale: 1.05 }}
               className="relative flex items-center">
