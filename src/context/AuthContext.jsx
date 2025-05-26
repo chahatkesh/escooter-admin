@@ -19,19 +19,48 @@ export const AuthProvider = ({ children }) => {
       const token = localStorage.getItem("token");
       console.log("Checking auth, token exists:", !!token);
 
-      if (token) {
-        const response = await authService.getCurrentUser();
-        console.log("Auth check successful:", response.data);
+      if (!token) {
+        console.log("No token found, user not authenticated");
+        setIsAuthenticated(false);
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      // Add a small delay before making the request
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      console.log("Making getCurrentUser request with token");
+      const response = await authService.getCurrentUser();
+      console.log("getCurrentUser response:", {
+        status: response.status,
+        data: response.data,
+        headers: response.headers,
+      });
+
+      if (response.data) {
+        console.log("User data received, setting authenticated state");
         setUser(response.data);
         setIsAuthenticated(true);
       } else {
-        console.log("No token found, user not authenticated");
+        console.log("No user data in response, clearing token");
+        localStorage.removeItem("token");
         setIsAuthenticated(false);
         setUser(null);
       }
     } catch (error) {
-      console.error("Auth check failed:", error);
-      localStorage.removeItem("token");
+      console.error("Auth check failed:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+        headers: error.response?.headers,
+      });
+
+      // Only remove token if it's an auth error
+      if (error.response?.status === 401) {
+        console.log("401 error received, removing token");
+        localStorage.removeItem("token");
+      }
       setIsAuthenticated(false);
       setUser(null);
       setError("Authentication failed");
@@ -48,14 +77,22 @@ export const AuthProvider = ({ children }) => {
         email: credentials.email,
       });
       const response = await authService.login(credentials);
-      console.log("Login response:", response.data);
+      console.log("Login response:", {
+        status: response.status,
+        data: response.data,
+        headers: response.headers,
+      });
 
       const { token, admin } = response.data;
 
       if (token) {
+        console.log("Token received, storing in localStorage");
+        // Store token and user data
         localStorage.setItem("token", token);
         setUser(admin);
         setIsAuthenticated(true);
+
+        // Don't call checkAuth immediately after login
         console.log("Login successful, user authenticated");
         return { success: true };
       } else {
@@ -64,7 +101,12 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: "No token received" };
       }
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error("Login failed:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+        headers: error.response?.headers,
+      });
       const errorMessage = error.response?.data?.message || "Login failed";
       setError(errorMessage);
       return {

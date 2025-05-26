@@ -20,7 +20,11 @@ export const scooterApi = axios.create({
 });
 
 // Token management
-const getToken = () => localStorage.getItem('token');
+const getToken = () => {
+  const token = localStorage.getItem('token');
+  console.log('Getting token:', token ? 'Token exists' : 'No token');
+  return token;
+};
 
 // Request interceptors to add auth tokens
 authApi.interceptors.request.use(
@@ -28,6 +32,9 @@ authApi.interceptors.request.use(
     const token = getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('Added token to request headers:', config.url);
+    } else {
+      console.log('No token available for request:', config.url);
     }
     return config;
   },
@@ -47,17 +54,26 @@ scooterApi.interceptors.request.use(
 
 // Response interceptors for error handling
 const handleResponse = (response) => {
+  console.log('API Response:', response.config.url, response.status);
   return response;
 };
 
 const handleError = (error) => {
-  console.error('API Error:', error);
+  console.error('API Error:', {
+    url: error.config?.url,
+    status: error.response?.status,
+    data: error.response?.data,
+    message: error.message
+  });
 
   // Handle unauthorized access
   if (error.response?.status === 401) {
-    // Token is invalid or expired
-    localStorage.removeItem('token');
-    window.location.href = '/login';
+    // Only redirect if we're not already on the login page
+    if (!window.location.pathname.includes('/login')) {
+      console.log('Unauthorized access, redirecting to login');
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
   }
 
   return Promise.reject(error);

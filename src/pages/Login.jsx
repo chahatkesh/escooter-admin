@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("admin@barqscoot.com");
+  const [password, setPassword] = useState("AdminPass123");
   const [localError, setLocalError] = useState("");
   const { login, loading, error, clearError } = useAuth();
 
