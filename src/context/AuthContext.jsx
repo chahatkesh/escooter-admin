@@ -1,51 +1,81 @@
-import { createContext, useState, useContext, useEffect } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 import { authService } from "../services/api";
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [admin, setAdmin] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // Check if admin is logged in on mount
-    const token = localStorage.getItem("admin_token");
-    if (token) {
-      setAdmin({ token });
-    }
-    setLoading(false);
+    checkAuth();
   }, []);
 
-  const login = async (email, password) => {
-    setLoading(true);
-    setError(null);
-
+  const checkAuth = async () => {
     try {
-      const response = await authService.loginAdmin(email, password);
-      const { token } = response.data;
+      const token = localStorage.getItem("token");
+      console.log("Checking auth, token exists:", !!token);
 
-      localStorage.setItem("admin_token", token);
-      setAdmin({ token });
-      return true;
-    } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
-      return false;
+      if (token) {
+        const response = await authService.getCurrentUser();
+        console.log("Auth check successful:", response.data);
+        setUser(response.data);
+        setIsAuthenticated(true);
+      } else {
+        console.log("No token found, user not authenticated");
+        setIsAuthenticated(false);
+        setUser(null);
+      }
+    } catch (error) {
+      console.error("Auth check failed:", error);
+      localStorage.removeItem("token");
+      setIsAuthenticated(false);
+      setUser(null);
     } finally {
       setLoading(false);
     }
   };
 
+  const login = async (credentials) => {
+    try {
+      console.log("Attempting login with credentials:", {
+        email: credentials.email,
+      });
+      const response = await authService.login(credentials);
+      console.log("Login response:", response.data);
+
+      const { token, admin } = response.data;
+
+      if (token) {
+        localStorage.setItem("token", token);
+        setUser(admin);
+        setIsAuthenticated(true);
+        console.log("Login successful, user authenticated");
+        return { success: true };
+      } else {
+        console.error("No token received in response");
+        return { success: false, error: "No token received" };
+      }
+    } catch (error) {
+      console.error("Login failed:", error);
+      return {
+        success: false,
+        error: error.response?.data?.message || "Login failed",
+      };
+    }
+  };
+
   const logout = () => {
-    localStorage.removeItem("admin_token");
-    setAdmin(null);
+    localStorage.removeItem("token");
+    setIsAuthenticated(false);
+    setUser(null);
   };
 
   const value = {
-    admin,
-    isAuthenticated: !!admin,
+    isAuthenticated,
     loading,
-    error,
+    user,
     login,
     logout,
   };

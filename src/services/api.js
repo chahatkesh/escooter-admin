@@ -21,7 +21,7 @@ export const scooterApi = axios.create({
 
 // Add request interceptor to add auth token
 const addAuthToken = (config) => {
-  const token = localStorage.getItem('admin_token');
+  const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -36,7 +36,7 @@ const handleResponse = (response) => {
 const handleError = (error) => {
   // Handle unauthorized errors (redirect to login)
   if (error.response && error.response.status === 401) {
-    localStorage.removeItem('admin_token');
+    localStorage.removeItem('token');
     window.location.href = '/login';
   }
   return Promise.reject(error);
@@ -51,12 +51,12 @@ scooterApi.interceptors.response.use(handleResponse, handleError);
 
 // Auth API services
 export const authService = {
-  // Admin authentication
-  createAdmin: (email, password) =>
-    authApi.post('/admin/create', { email, password }),
+  // Authentication
+  login: (credentials) =>
+    authApi.post('/admin/login', credentials),
 
-  loginAdmin: (email, password) =>
-    authApi.post('/admin/login', { email, password }),
+  getCurrentUser: () =>
+    authApi.get('/admin/me'),
 
   // User management
   getAllUsers: () =>

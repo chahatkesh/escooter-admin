@@ -1,18 +1,19 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { login, loading, error } = useAuth();
-  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const success = await login(email, password);
-    if (success) {
-      navigate("/dashboard");
+    const result = await login({ email, password });
+    if (result.success) {
+      // Don't manually navigate - let the AuthContext and App.jsx handle the redirect
+      console.log("Login successful, authentication flow will handle redirect");
+    } else {
+      console.error("Login failed:", result.error);
     }
   };
 

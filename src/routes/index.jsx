@@ -17,7 +17,7 @@ const AppRoutes = () => {
     <Routes>
       {/* Public routes */}
       <Route path="/login" element={<Login />} />
-      
+
       {/* Protected routes */}
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -30,10 +30,11 @@ const AppRoutes = () => {
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
-      
+
       {/* Fallback route */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
+};
 
 export default AppRoutes;

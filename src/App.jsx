@@ -14,12 +14,12 @@ function App() {
     if (!loading) {
       // If not logged in and not on the login page, redirect to login
       if (!isAuthenticated && location.pathname !== "/login") {
-        navigate("/login");
+        navigate("/login", { replace: true });
       }
 
       // If logged in and on the login page, redirect to dashboard
       if (isAuthenticated && location.pathname === "/login") {
-        navigate("/dashboard");
+        navigate("/dashboard", { replace: true });
       }
     }
   }, [isAuthenticated, loading, location.pathname, navigate]);
